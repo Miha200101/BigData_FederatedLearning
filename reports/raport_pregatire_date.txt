@@ -1,0 +1,16 @@
+Colectarea si pregătirea datelor
+
+Set date: student_vle (OULAD)
+
+Randuri initiale: 10655280
+Randuri finale: 8459320
+Randuri eliminate: 2195960 (20.61%)
+
+Null code_module: 0
+Null code_presentation: 0
+Null id_student: 0
+Null id_site: 0
+Null date: 0
+Null sum_click: 0
+sum_click: min=1, max=6977
+date: min=-25, max=269

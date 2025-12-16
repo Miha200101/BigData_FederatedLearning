@@ -1,0 +1,17 @@
+paths:
+  raw: "data/raw/"
+  interim: "data/interim/"
+  processed: "data/processed/"
+
+datasets:
+  student_vle:
+    input_file: "studentVle.csv"
+    interim_dir: "student_vle"
+    processed_dir: "student_vle_clean"
+    required_cols: ["code_module", "code_presentation", "id_student", "id_site", "date", "sum_click"]
+    dedup_keys: ["code_module", "code_presentation", "id_student", "id_site", "date"]
+
+quality_rules:
+  sum_click_min: 0
+  date_min: -3650
+  date_max: 3650
