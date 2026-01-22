@@ -1,41 +1,32 @@
 from utils import load_config, make_spark, ensure_dir
-from pyspark.sql.functions import col, min as smin, max as smax
+from pyspark.sql.functions import col
 
 def main():
+    """
+    Validare minima a datelor din zona processed.
+    - verifică NULL pe coloanele esențiale
+    - generează un raport text per dataset
+    """
     cfg = load_config("configs/config.yaml")
     ensure_dir("reports")
+    spark = make_spark("Validate", cfg)
 
-    spark = make_spark("Validare date")
+    for name, ds in cfg["datasets"].items():
+        df = spark.read.parquet(cfg["paths"]["processed"] + ds["processed_dir"])
 
-    raw = spark.read.parquet(cfg["paths"]["interim"] + cfg["datasets"]["student_vle"]["interim_dir"])
-    clean = spark.read.parquet(cfg["paths"]["processed"] + cfg["datasets"]["student_vle"]["processed_dir"])
+        lines = []
+        lines.append(f"VALIDARE DATASET: {name}")
+        lines.append(f"Randuri: {df.count()}")
 
-    total_raw = raw.count()
-    total_clean = clean.count()
-    removed = total_raw - total_clean
-    pct_removed = (removed / total_raw) * 100
+        for c in ds["required_cols"]:
+            if c in df.columns:
+                lines.append(f"Null {c}: {df.filter(col(c).isNull()).count()}")
 
-    report = []
-    report.append("Colectarea si pregătirea datelor\n")
-    report.append("Set date: student_vle (OULAD)\n")
-    report.append(f"Randuri initiale: {total_raw}")
-    report.append(f"Randuri finale: {total_clean}")
-    report.append(f"Randuri eliminate: {removed} ({pct_removed:.2f}%)\n")
+        out_path = f"reports/validate_{name}.txt"
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
 
-    for c in cfg["datasets"]["student_vle"]["required_cols"]:
-        if c in clean.columns:
-            report.append(f"Null {c}: {clean.filter(col(c).isNull()).count()}")
-
-    if "sum_click" in clean.columns:
-        stats = clean.select(smin("sum_click"), smax("sum_click")).first()
-        report.append(f"sum_click: min={stats[0]}, max={stats[1]}")
-
-    if "date" in clean.columns:
-        stats = clean.select(smin("date"), smax("date")).first()
-        report.append(f"date: min={stats[0]}, max={stats[1]}")
-
-    with open("reports/raport_pregatire_date.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(report))
+        print(f"Raport validare scris: {out_path}")
 
     spark.stop()
 

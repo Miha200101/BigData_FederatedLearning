@@ -1,0 +1,71 @@
+======================================================================
+RAPORT FINAL PROIECT
+Tema: Analiza Federată a Datelor Educaționale
+Data generării: 2026-01-22 23:18:25
+======================================================================
+
+1. DATE PROCESATE
+--------------------------------------------------
+Rânduri în dataset-ul principal (student_vle): 8459320
+Rânduri în dataset-ul final de analiză dupa join: 29228
+--------------------------------------------------
+
+2. VALIDARE CALITATE DATE
+--------------------------------------------------
+
+[Dataset: student_vle]
+VALIDARE DATASET: student_vle
+Randuri: 8459320
+Null code_module: 0
+Null code_presentation: 0
+Null id_student: 0
+Null id_site: 0
+Null date: 0
+Null sum_click: 0
+
+[Dataset: student_info]
+VALIDARE DATASET: student_info
+Randuri: 32593
+Null code_module: 0
+Null code_presentation: 0
+Null id_student: 0
+Null final_result: 0
+
+[Dataset: student_assessment]
+VALIDARE DATASET: student_assessment
+Randuri: 173739
+Null id_assessment: 0
+Null id_student: 0
+Null score: 0
+
+[Dataset: assessments]
+VALIDARE DATASET: assessments
+Randuri: 206
+Null id_assessment: 0
+Null code_module: 0
+Null code_presentation: 0
+
+--------------------------------------------------
+
+3. ANALIZA DATELOR
+--------------------------------------------------
+EDA REPORT
+Row(label=1, count=22550, avg_clicks=11023.217294900222, avg_days=69.80727272727273, avg_score=75.2713961337254)
+Row(label=0, count=6678, avg_clicks=3879.733303384247, avg_days=35.03519017669961, avg_score=64.48216969482488)
+
+--------------------------------------------------
+
+4. REZULTATE MACHINE LEARNING CENTRALIZAT
+--------------------------------------------------
+Model: Logistic Regression
+AUC Score: 0.7547410506109425
+
+--------------------------------------------------
+
+5. SIMULARE FEDERATED LEARNING
+--------------------------------------------------
+REZULTATE SIMULARE FEDERATED LEARNING
+Total clienti (cursuri): 22
+Modele antrenate cu succes: 22
+Clienti ignorati (date insuficiente): 0
+======================================================================

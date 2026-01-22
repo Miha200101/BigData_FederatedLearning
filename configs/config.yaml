@@ -3,15 +3,42 @@ paths:
   interim: "data/interim/"
   processed: "data/processed/"
 
+spark:
+  shuffle_partitions: 8
+  coalesce_out: 4
+
+analysis:
+  output_dir: "analysis_dataset/"
+
+quality_rules:
+  sum_click_min: 1
+  date_min: -100
+  date_max: 300
+  score_min: 0
+  score_max: 100
+
 datasets:
   student_vle:
     input_file: "studentVle.csv"
-    interim_dir: "student_vle"
-    processed_dir: "student_vle_clean"
+    interim_dir: "student_vle/"
+    processed_dir: "student_vle/"
     required_cols: ["code_module", "code_presentation", "id_student", "id_site", "date", "sum_click"]
     dedup_keys: ["code_module", "code_presentation", "id_student", "id_site", "date"]
-
-quality_rules:
-  sum_click_min: 0
-  date_min: -3650
-  date_max: 3650
+  student_info:
+    input_file: "studentInfo.csv"
+    interim_dir: "student_info/"
+    processed_dir: "student_info/"
+    required_cols: ["code_module", "code_presentation", "id_student", "final_result"]
+    dedup_keys: ["code_module", "code_presentation", "id_student"]
+  student_assessment:
+    input_file: "studentAssessment.csv"
+    interim_dir: "student_assessment/"
+    processed_dir: "student_assessment/"
+    required_cols: ["id_assessment", "id_student", "score"]
+    dedup_keys: ["id_assessment", "id_student"]
+  assessments:
+    input_file: "assessments.csv"
+    interim_dir: "assessments/"
+    processed_dir: "assessments/"
+    required_cols: ["id_assessment", "code_module", "code_presentation"]
+    dedup_keys: ["id_assessment"]

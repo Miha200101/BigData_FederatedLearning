@@ -1,60 +1,40 @@
-from pyspark.sql.functions import col, concat_ws
+from pyspark.sql.functions import col, concat_ws, when
 from utils import load_config, ensure_dir, make_spark
 
 def main():
+    # Acest script procesează datele din zona 'interim', elimină valorile nule și pregătește feature-urile necesare pentru analiză.
+    # Incarcare configuratie si initializare Spark
     cfg = load_config("configs/config.yaml")
-    
-    # Configurare cai
-    interim_path = cfg["paths"]["interim"]
-    processed_path = cfg["paths"]["processed"]
-    ds = cfg["datasets"]["student_vle"]
-    rules = cfg["quality_rules"]
+    spark = make_spark("Curatare dataset", cfg)
 
-    spark = make_spark("Curatare Date:")
+    # Trecem prin fiecare dataset definit in config
+    for name, ds in cfg["datasets"].items():
 
-    print("Procesare date...")
-    df = spark.read.parquet(interim_path + ds["interim_dir"])
-    before = df.count()
+        df = spark.read.parquet(cfg["paths"]["interim"] + ds["interim_dir"])
 
-    # Pastram coloanele necesare
-    cols = [c for c in ds["required_cols"] if c in df.columns]
-    if "ingest_timestamp" in df.columns:
-        cols.append("ingest_timestamp")
-    df = df.select(*cols)
+        # Selectam doar coloanele relevante si eliminam randurile care au valori NULL
+        cols = [c for c in ds["required_cols"] if c in df.columns]
+        df = df.select(*cols).dropna(subset=cols)
 
-    # Eliminam datele incomplete (NULL)
-    df = df.dropna(subset=ds["required_cols"])
+        # Identifica unic o instanta de curs (ex: AAA_2013J) care va deveni un "client" federat
+        if "code_module" in df.columns and "code_presentation" in df.columns:
+            df = df.withColumn("client_id", concat_ws("_", col("code_module"), col("code_presentation")))
 
-    # Corectam tipurile de date
-    df = df.withColumn("sum_click", col("sum_click").cast("int")) \
-           .withColumn("date", col("date").cast("int")) \
-           .withColumn("id_student", col("id_student").cast("string"))
+        # Convertim rezultatul text ("Pass", "Fail", "Distinction") in binar (0/1)
+        # 0 = Fail, 1 = Pass sau Distinction
+        if name == "student_info":
+            df = df.withColumn("label", when(col("final_result") == "Fail", 0).otherwise(1))
 
-    # Filtre de calitate (eliminam valori ilogice)
-    df = df.filter(col("sum_click") >= rules["sum_click_min"])
-    df = df.filter((col("date") >= rules["date_min"]) & (col("date") <= rules["date_max"]))
+        # Eliminam inregistrarile duplicate pentru a asigura calitatea datelor
+        if "dedup_keys" in ds:
+            df = df.dropDuplicates(ds["dedup_keys"])
 
-    # Eliminam duplicatele
-    df = df.dropDuplicates(ds["dedup_keys"])
+        # Salvare in zona finala 'processed'
+        out_dir = cfg["paths"]["processed"] + ds["processed_dir"]
+        ensure_dir(out_dir)
 
-    # Cream ID-ul unic pentru Federated Learning
-    # (Combina cursul cu sesiunea pentru a simula un "client" in retea)
-    df = df.withColumn("client_id", concat_ws("_", col("code_module"), col("code_presentation")))
-
-    after = df.count()
-
-    # Salvare finala
-    out_dir = processed_path + ds["processed_dir"]
-    ensure_dir(out_dir)
-    df.coalesce(4).write.mode("overwrite").parquet(out_dir)
-
-    print("-" * 30)
-    print(" Curatare finalizata")
-    print(f"   Randuri initiale: {before}")
-    print(f"   Randuri finale:   {after}")
-    print(f"   Eliminate:        {before - after} ({(before-after)/before:.2%})")
-    print("-" * 30)
-
+        # Scriem datele in format Parquet
+        df.write.mode("overwrite").parquet(out_dir)
     spark.stop()
 
 if __name__ == "__main__":

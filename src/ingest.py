@@ -2,30 +2,30 @@ from pyspark.sql.functions import current_timestamp
 from utils import load_config, ensure_dir, make_spark
 
 def main():
+    # Acest script preia datele brute (CSV) și le transformă în format Parquet pentru eficiență.
+
+    # Incarcam configuratiile
     cfg = load_config("configs/config.yaml")
 
-    # Cai fisiere
-    raw_path = cfg["paths"]["raw"]
-    interim_path = cfg["paths"]["interim"]
-    ds = cfg["datasets"]["student_vle"]
+    # Initializam sesiunea Spark
+    spark = make_spark("OULAD - Ingest", cfg)
 
-    spark = make_spark("O1 - Ingestie Date")
+    # Procesam fiecare set de date definit in configuratie
+    for name, ds in cfg["datasets"].items():
 
-    print(f"--> Citesc datele brute din: {ds['input_file']}...")
-    df = spark.read.csv(raw_path + ds["input_file"], header=True, inferSchema=True)
+        # Citim fisierul CSV original din folderul raw
+        # inferSchema=True permite Spark sa detecteze automat daca o coloana e numar sau text
+        df = spark.read.csv(cfg["paths"]["raw"] + ds["input_file"], header=True, inferSchema=True)
 
-    # Adaug timestamp-ul ingestiei
-    df = df.withColumn("ingest_timestamp", current_timestamp())
+        # Adaugam o coloana cu data si ora procesarii (pentru trasabilitate)
+        df = df.withColumn("ingest_timestamp", current_timestamp())
 
-    # Salvare in format Parquet (mult mai rapid decat CSV)
-    out_dir = interim_path + ds["interim_dir"]
-    ensure_dir(out_dir)
-    df.write.mode("overwrite").parquet(out_dir)
+        # Definim calea de iesire catre zona 'interim'
+        out_dir = cfg["paths"]["interim"] + ds["interim_dir"]
 
-    print(f"  Ingestie completa!")
-    print(f"   Salvat in: {out_dir}")
-    print(f"   Total randuri: {df.count()}")
-
+        #Salvam datele in format Parquet
+        ensure_dir(out_dir)
+        df.write.mode("overwrite").parquet(out_dir)
     spark.stop()
 
 if __name__ == "__main__":
