@@ -1,0 +1,125 @@
+# ============================================================
+# INSTRUCTIUNI COMPLETE - Ce faci in VS Code, pas cu pas
+# ============================================================
+
+## STEP 1 — Copiaza fisierele noi in proiect
+
+Pune aceste fisiere in proiectul tau local (PROIECT_BIGDATAFL/):
+
+  src/flower_client.py          <- clientul Flower
+  src/o3_flower_federated.py    <- simularea FL cu Flower
+  setup_gcs.py                  <- upload pe Google Cloud
+  requirements.txt              <- actualizat cu flwr, sklearn etc.
+
+Structura finala src/:
+  src/
+  ├── clean.py
+  ├── flower_client.py          ← NOU
+  ├── generate_final_report.py
+  ├── ingest.py
+  ├── o2_build_analysis_dataset.py
+  ├── o3_eda.py
+  ├── o3_federated_sim.py
+  ├── o3_flower_federated.py    ← NOU
+  ├── o3_ml.py
+  ├── run_pipeline.py
+  ├── utils.py
+  └── validate.py
+
+
+## STEP 2 — Instaleaza dependentele
+
+In terminalul VS Code (Ctrl+`):
+
+  pip install flwr[simulation] scikit-learn google-cloud-storage matplotlib
+
+
+## STEP 3 — Dataset-uri suplimentare
+
+### Dataset 2: UCI Student Performance
+  URL: https://archive.ics.uci.edu/static/public/320/student+performance.zip
+  
+  1. Descarca zip-ul
+  2. Extrage fisierele: student-mat.csv si student-por.csv
+  3. Pune-le in: data/raw/uci/
+  
+  Structura dorita:
+    data/raw/uci/student-mat.csv
+    data/raw/uci/student-por.csv
+
+### Dataset 3: xAPI-Edu-Data
+  URL: https://www.kaggle.com/datasets/aljarah/xAPI-Edu-Data
+  
+  1. Descarca xAPI-Edu-Data.csv de pe Kaggle (necesita cont Kaggle, gratuit)
+  2. Pune-l in: data/raw/xapi/
+  
+  Structura dorita:
+    data/raw/xapi/xAPI-Edu-Data.csv
+
+
+## STEP 4 — Ruleaza Flower FL
+
+  # Din folderul radacina al proiectului:
+  cd PROIECT_BIGDATAFL
+  python src/o3_flower_federated.py
+
+  # Vei vedea ceva de genul:
+  # OULAD: 29228 studenti, 22 cursuri
+  # UCI: 1044 studenti, 4 clienti
+  # xAPI: 480 studenti, 14 clienti
+  #
+  # Runda 1/5 -> AUC=0.7123  Acc=0.7456  F1=0.8012  (22 clienti)
+  # Runda 2/5 -> AUC=0.7289  Acc=0.7534  F1=0.8134  (22 clienti)
+  # ...
+  
+  # Raportul se salveaza in: reports/O3_flower_report.txt
+  # Datele JSON in:          reports/flower_results.json
+
+
+## STEP 5 — Google Cloud Storage (GCS)
+
+### 5a. Creaza proiectul nou in GCP
+  1. Mergi la: https://console.cloud.google.com
+  2. Click pe "Select a project" -> "NEW PROJECT"
+  3. Nume: "disertatie-federated-learning"
+  4. Click CREATE
+
+### 5b. Instaleaza Google Cloud CLI (o singura data)
+  Windows: https://cloud.google.com/sdk/docs/install
+  
+  Dupa instalare, in terminal:
+    gcloud init
+    gcloud auth application-default login
+    # Se deschide browser -> te autentifici cu contul universitatii
+
+### 5c. Configureaza setup_gcs.py
+  Deschide setup_gcs.py si modifica:
+    GCS_PROJECT_ID  = "disertatie-federated-learning"  # ID-ul proiectului tau
+    GCS_BUCKET_NAME = "edu-federated-data-mihaiela"    # Nume unic global!
+
+### 5d. Incarca datele
+  python setup_gcs.py --create-bucket   # Creeaza bucket-ul
+  python setup_gcs.py --upload          # Incarca data/raw/ pe GCS
+  python setup_gcs.py --verify          # Verifica ce e acolo
+
+### 5e. Verifica in browser
+  https://console.cloud.google.com/storage/browser/edu-federated-data-mihaiela
+
+
+## STEP 6 — Git push cu fisierele noi
+
+  git add src/flower_client.py
+  git add src/o3_flower_federated.py
+  git add setup_gcs.py
+  git add requirements.txt
+  git add configs/
+  git commit -m "feat: adauga Flower FL cu multi-dataset support si GCS integration"
+  git push origin main
+
+
+## NOTE: .gitignore
+Asigura-te ca data/ e in .gitignore (fisierele de date sunt mari):
+  data/
+  .venv/
+  __pycache__/
+  *.pyc

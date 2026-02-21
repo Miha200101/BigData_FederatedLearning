@@ -1,5 +1,24 @@
+# ============================================================
+# requirements.txt - Dependente proiect Federated Learning
+# ============================================================
+
+# Core Big Data
 pyspark
 pandas
 pyarrow
 pyyaml
 setuptools
+
+# Federated Learning - Flower framework
+flwr[simulation]
+
+# Machine Learning
+scikit-learn
+numpy
+
+# Google Cloud Storage (pentru GCS Data Lake)
+google-cloud-storage
+
+# Vizualizari (optionale, pentru notebook-uri)
+matplotlib
+seaborn
