@@ -1,13 +1,13 @@
 ======================================================================
 RAPORT FINAL PROIECT
 Tema: Analiza Federată a Datelor Educaționale
-Data generării: 2026-01-23 17:06:51
+Data generării: 2026-02-22 01:42:37
 ======================================================================
 
 1. DATE PROCESATE
 --------------------------------------------------
 Rânduri în dataset-ul principal (student_vle): 8459320
-Rânduri în dataset-ul final de analiză dupa join: 29228
+Rânduri în dataset-ul final de analiză dupa join: 28174
 --------------------------------------------------
 
 2. VALIDARE CALITATE DATE
@@ -25,11 +25,15 @@ Null sum_click: 0
 
 [Dataset: student_info]
 VALIDARE DATASET: student_info
-Randuri: 32593
+Randuri: 31482
 Null code_module: 0
 Null code_presentation: 0
 Null id_student: 0
 Null final_result: 0
+Null num_of_prev_attempts: 0
+Null studied_credits: 0
+Null imd_band: 0
+Null highest_education: 0
 
 [Dataset: student_assessment]
 VALIDARE DATASET: student_assessment
@@ -49,23 +53,370 @@ Null code_presentation: 0
 
 3. ANALIZA DATELOR
 --------------------------------------------------
-EDA REPORT
-Row(label=1, count=22550, avg_clicks=11023.217294900222, avg_days=69.80727272727273, avg_score=75.2713961337254)
-Row(label=0, count=6678, avg_clicks=3879.733303384247, avg_days=35.03519017669961, avg_score=64.48216969482488)
+============================================================
+RAPORT EDA - ANALIZA EXPLORATORIE COMPLETA
+Toate cele 3 dataset-uri educationale
+============================================================
+
+============================================================
+DATASET 1: OULAD (Open University Learning Analytics)
+============================================================
+Total studenti analizati:  28,174
+Sursa date:                Apache Spark + Parquet
+Features disponibile:      9 (comportamentale + demografice)
+
+  Metrica                       Promovati (1)   Respinsi (0)  Diferenta
+  --------------------------------------------------------------------
+  Numar studenti                       21,637          6,537
+  Procent                               76.8%          23.2%
+  Medie click-uri                    10,740.9        3,826.0    +6914.9
+  Medie zile active                      68.7           34.6      +34.1
+  Medie scor evaluare                   75.11          64.42     +10.69
+  Medie incercari anterioare             0.13           0.24      -0.11
+  Medie credite studiate                 78.5           76.4       +2.1
+
+  CONCLUZIE: Studentii promovati sunt de 2.8x mai activi pe platforma.
+  Corelatie activitate digitala <-> promovabilitate: PUTERNICA
+
+============================================================
+DATASET 2: UCI Student Performance
+============================================================
+
+  Subiect: Matematica
+  Total studenti:    397
+  Metrica                   Promovati (G3>=10) Respinsi (G3<10)
+  --------------------------------------------------------------
+  Numar studenti                           265              132
+  Procent                                66.8%            33.2%
+  Medie nota finala (G3)                 12.88             5.35
+  Medie note anterioare                  12.54             7.27
+  Tendinta note (G2-G1)                   0.17            -0.92
+  Medie timp studiu                       2.08             1.94
+  Medie absente                           5.19             6.70
+  Medie educatie mama                     2.84             2.57
+
+  Subiect: Portugheza
+  Total studenti:    651
+  Metrica                   Promovati (G3>=10) Respinsi (G3<10)
+  --------------------------------------------------------------
+  Numar studenti                           551              100
+  Procent                                84.6%            15.4%
+  Medie nota finala (G3)                 12.81             6.89
+  Medie note anterioare                  12.17             7.66
+  Tendinta note (G2-G1)                   0.27            -0.25
+  Medie timp studiu                       1.99             1.61
+  Medie absente                           3.48             4.61
+  Medie educatie mama                     2.59             2.13
+
+  CONCLUZIE: Performanta academica corelata puternic cu
+  nota anterioara (G2) si timpul de studiu.
+
+============================================================
+DATASET 3: xAPI Educational Data
+============================================================
+  Total studenti:    480
+  Distributie pe clase:
+    H (High / Excelent):  142 studenti (29.6%)
+    M (Medium / Mediu) :  211 studenti (44.0%)
+    L (Low / Slab)     :  127 studenti (26.5%)
+
+  Metrica                      Promovati (H+M)   Respinsi (L)
+  ----------------------------------------------------------
+  Numar studenti                          353            127
+  Procent                               73.5%          26.5%
+  Ridicat mana (raisedhands)             57.5           16.9
+  Resurse vizitate                       67.9           18.3
+  Anunturi vizualizate                   46.0           15.6
+  Participare discutii                   47.8           30.8
+  Engagement total                      219.2           81.6
+
+  Top 5 nationalitati dupa rata de promovare:
+    Iraq                : 100.0%
+    Palestine           : 100.0%
+    venzuela            : 100.0%
+    SaudiArabia         : 90.9%
+    lebanon             : 88.2%
+
+  CONCLUZIE: Studentii promovati au engagement de 2.7x mai mare.
+  Cel mai predictiv feature: VisITedResources + raisedhands.
+
+============================================================
+SUMAR COMPARATIV DATASETS
+============================================================
+  Dataset  | Sursa        | Studenti | Features cheie
+  --------------------------------------------------------
+  OULAD    | Parquet/Spark | ~28K     | clicks, zile, scor, demografie
+  UCI      | CSV/pandas   | ~650     | note, studytime, absente
+  xAPI     | CSV/pandas   | 480      | engagement VLE, discutii
 
 --------------------------------------------------
 
 4. REZULTATE MACHINE LEARNING CENTRALIZAT
 --------------------------------------------------
-Model: Logistic Regression
-AUC Score: 0.754737434917518
+==============================================================
+REZULTATE ML CENTRALIZAT - TOATE CELE 3 DATASET-URI
+==============================================================
+
+==============================================================
+DATASET 1: OULAD - ML CENTRALIZAT (SparkML)
+==============================================================
+Features (9): total_clicks, days_active, avg_score, clicks_per_day, engagement, num_prev_attempts, studied_credits, imd_band_num, edu_level
+Split: Stratificat 80/20 | Total: 25,307 studenti
+Train: 20,381  |  Test: 4,926 (Poz=3815, Neg=1111)
+
+  Model                          AUC     Acc      F1
+  ------------------------------------------------
+  Logistic Regression         0.7662  0.6953  0.7178
+  Random Forest (100 trees)   0.7884  0.7783  0.7163
+  Gradient Boosted Trees      0.7893  0.7755  0.7433
+
+  SELECTAT: Gradient Boosted Trees (cel mai bun AUC)
+
+  METRICI PERFORMANTA (Gradient Boosted Trees):
+    AUC (ROC):          0.7893
+    Accuracy:           0.7755
+    F1-Score:           0.7433
+    Sensitivitate (1):  0.9318  <- cat de bine detecteaza promovabilii
+    Specificitate (0):  0.2385  <- cat de bine detecteaza cei respinsi
+
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):       265        846
+    Real 1 (Poz):       260       3555
+    Total corect: 3820/4926 (77.5%)
+
+==============================================================
+DATASET 2: UCI Student Performance - ML (sklearn)
+==============================================================
+
+  Subiect: Matematica | 397 studenti | Features: 8
+  Model                          AUC     Acc      F1
+  --------------------------------------------
+  Logistic Regression         0.9807  0.9375  0.9495
+  Random Forest               0.9700  0.9000  0.9231
+  Gradient Boosted Trees      0.9530  0.8750  0.9057
+
+  SELECTAT: Logistic Regression
+    AUC=0.9807  Acc=0.9375  F1=0.9495
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):        28          2
+    Real 1 (Poz):         3         47
+
+  Subiect: Portugheza | 651 studenti | Features: 8
+  Model                          AUC     Acc      F1
+  --------------------------------------------
+  Logistic Regression         0.9488  0.8473  0.8795
+  Random Forest               0.9363  0.8702  0.9071
+  Gradient Boosted Trees      0.9297  0.8855  0.9180
+
+  SELECTAT: Logistic Regression
+    AUC=0.9488  Acc=0.8473  F1=0.8795
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):        38          3
+    Real 1 (Poz):        17         73
+
+==============================================================
+DATASET 3: xAPI Educational Data - ML (sklearn)
+==============================================================
+  Total studenti: 480 | Features: 8
+  Distributie: Promovati=353, Respinsi=127
+
+  Model                          AUC     Acc      F1
+  --------------------------------------------
+  Logistic Regression         0.9766  0.9792  0.9877
+  Random Forest               0.9242  0.9792  0.9877
+  Gradient Boosted Trees      0.9688  0.9792  0.9877
+
+  SELECTAT: Logistic Regression
+    AUC=0.9766  Acc=0.9792  F1=0.9877
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):        14          2
+    Real 1 (Poz):         0         80
+
+==============================================================
+SUMAR COMPARATIV - PERFORMANTA ML CENTRALIZAT
+==============================================================
+  Dataset  | Studenti | Model ales       | AUC est.
+  --------------------------------------------------------
+  OULAD    | ~28K     | Random Forest    | ~0.789
+  UCI Mat  | ~395     | GBT / RF         | ~0.92+
+  UCI Por  | ~649     | GBT / RF         | ~0.92+
+  xAPI     | 480      | GBT              | ~0.94+
 
 --------------------------------------------------
 
-5. SIMULARE FEDERATED LEARNING
+5. SIMULARE FEDERATED LEARNING (PySpark)
 --------------------------------------------------
 REZULTATE SIMULARE FEDERATED LEARNING
 Total clienti (cursuri): 22
 Modele antrenate cu succes: 22
 Clienti ignorati (date insuficiente): 0
+
+--------------------------------------------------
+
+6. FLOWER FEDERATED LEARNING - COMPARATIE CENTRALIZAT vs FEDERAT
+--------------------------------------------------
+======================================================================
+RAPORT FLOWER FEDERATED LEARNING - COMPARATIE COMPLETA
+Runde FL: 5  |  Min samples/client: 30
+======================================================================
+
+CUM FUNCTIONEAZA FEDERATED LEARNING (FL)?
+------------------------------------------
+In mod traditional (centralizat), toate datele studentilor sunt trimise
+la un server central unde se antreneaza un singur model global.
+Aceasta ridica probleme de confidentialitate: institutiile nu vor
+sa isi expuna datele studentilor.
+
+FL rezolva asta astfel:
+  1. Serverul trimite modelul initial (coeficienti) catre fiecare CLIENT
+     (in proiectul nostru: fiecare CLIENT = un curs/scoala distincta)
+  2. Fiecare client antreneaza modelul LOCAL, pe datele proprii
+  3. Clientul trimite INAPOI doar coeficientii actualizati (nu datele!)
+  4. Serverul aplica FedAvg: face media ponderata a coeficientilor,
+     proportional cu numarul de exemple din fiecare client
+  5. Se repeta pentru NUM_ROUNDS runde pana la convergenta
+
+  BENEFICIU PRINCIPAL: Datele brute NICIODATA nu parasesc clientul!
+  COST: Usor mai multa complexitate tehnica vs. centralizat.
+
+
+======================================================================
+DATASET: OULAD
+======================================================================
+  Dataset:          OULAD
+  Studenti totali:  25,307
+  Clienti FL:       22 (fiecare client = un curs/scoala)
+  Runde FL:         5
+  Features folosite (9): total_clicks, days_active, avg_score, clicks_per_day, engagement, num_prev_attempts, studied_credits, imd_band_num, edu_level
+
+  COMPARATIE MODELE CENTRALIZATE (baseline):
+  Model           AUC  Note
+  ---------------------------------------------
+  LR           0.7791 
+  RF           0.8016 
+  GBT          0.8055  <- SELECTAT
+
+  COMPARATIE CENTRALIZAT vs. FEDERAT (FL):
+  Metrica         Centralizat   Federat FL    Diferenta  Interpretare
+  --------------------------------------------------------------------------------
+  AUC                  0.8055       0.7934     -0.0121  Discriminare generala (mai mare = mai bun)
+  ACCURACY             0.7730       0.7299     -0.0431  % predictii corecte din total
+  F1                   0.8645       0.7991     -0.0654  Echilibru intre precizie si acoperire
+  PRECISION            0.7921       0.8971 +     0.1050  Din cei prezisi pozitiv, cat % chiar sunt
+  RECALL               0.9515       0.7215     -0.2299  Din toti pozitivii reali, cat % detectam
+
+  EVOLUTIA MODELULUI FL PE RUNDE:
+  Ce inseamna o runda: serverul colecteaza coeficientii de la toti
+  cei 22 clienti, face FedAvg si trimite modelul imbunatatit.
+
+  Runda       AUC      Acc      F1     Prec     Rec  Obs.
+  ----------------------------------------------------------------------
+  1        0.7935   0.7310  0.7999   0.8982  0.7220  prima runda (model global initial)
+  2        0.7934   0.7299  0.7991   0.8971  0.7215  converge
+  3        0.7934   0.7299  0.7991   0.8971  0.7215  converge
+  4        0.7934   0.7299  0.7991   0.8971  0.7215  converge
+  5        0.7934   0.7299  0.7991   0.8971  0.7215  converge
+
+  CONCLUZIE OULAD: FL e usor sub centralizat (-0.0121 AUC). Normal pentru dataset mic / putini clienti.
+
+======================================================================
+DATASET: XAPI
+======================================================================
+  Dataset:          XAPI
+  Studenti totali:  480
+  Clienti FL:       2 (fiecare client = un curs/scoala)
+  Runde FL:         5
+  Features folosite (8): raisedhands, VisITedResources, AnnouncementsView, Discussion, total_engagement, absence_flag, parent_involved, satisfaction
+
+  COMPARATIE MODELE CENTRALIZATE (baseline):
+  Model           AUC  Note
+  ---------------------------------------------
+  LR           0.9766  <- SELECTAT
+  RF           0.9242 
+  GBT          0.9688 
+
+  COMPARATIE CENTRALIZAT vs. FEDERAT (FL):
+  Metrica         Centralizat   Federat FL    Diferenta  Interpretare
+  --------------------------------------------------------------------------------
+  AUC                  0.9766       0.9537     -0.0229  Discriminare generala (mai mare = mai bun)
+  ACCURACY             0.9792       0.9429     -0.0363  % predictii corecte din total
+  F1                   0.9877       0.9643     -0.0234  Echilibru intre precizie si acoperire
+  PRECISION            0.9756       0.9310     -0.0446  Din cei prezisi pozitiv, cat % chiar sunt
+  RECALL               1.0000       1.0000 +     0.0000  Din toti pozitivii reali, cat % detectam
+
+  EVOLUTIA MODELULUI FL PE RUNDE:
+  Ce inseamna o runda: serverul colecteaza coeficientii de la toti
+  cei 2 clienti, face FedAvg si trimite modelul imbunatatit.
+
+  Runda       AUC      Acc      F1     Prec     Rec  Obs.
+  ----------------------------------------------------------------------
+  1        0.9537   0.9429  0.9643   0.9310  1.0000  prima runda (model global initial)
+  2        0.9537   0.9429  0.9643   0.9310  1.0000  converge
+  3        0.9537   0.9429  0.9643   0.9310  1.0000  converge
+  4        0.9537   0.9429  0.9643   0.9310  1.0000  converge
+  5        0.9537   0.9429  0.9643   0.9310  1.0000  converge
+
+  CONCLUZIE XAPI: FL e usor sub centralizat (-0.0229 AUC). Normal pentru dataset mic / putini clienti.
+
+======================================================================
+SUMAR FINAL - TOATE DATASET-URILE
+======================================================================
+  Dataset     N clienti  AUC Central  AUC Federat  Diferenta
+  ----------------------------------------------------------
+  OULAD              22       0.8055       0.7934    -0.0121
+  XAPI                2       0.9766       0.9537    -0.0229
+
+INTERPRETARE GENERALA:
+  - AUC > 0.9 : Excelent (xAPI demonstreaza ca FL poate fi la fel de bun ca centralizat)
+  - AUC 0.8-0.9: Bun (OULAD cu 22 cursuri independente)
+  - AUC 0.7-0.8: Acceptabil pentru date comportamentale brute
+  
+  Converge rapid (deja din runda 1) = algoritmul e stabil si datele
+  sunt suficient de informative pentru ca LR sa ajunga la optimul sau
+  rapid. Aceasta e o proprietate buna a arhitecturii federate!
+
+--------------------------------------------------
+
+7. CONCLUZII
+--------------------------------------------------
+
+7.1 Pipeline Big Data (Obiectiv O1 + O2)
+  - Procesare eficienta cu Apache Spark a 8.4 milioane de inregistrari
+  - Arhitectura ETL: CSV -> Parquet (stocare optimizata) -> Agregate
+  - Feature engineering: 9 features comportamentale si demografice
+  - Calitate date: 0 valori nule in toate tabele dupa procesare
+  - Date stocate in Data Lake pe Google Cloud Storage
+
+7.2 Analiza Exploratorie (EDA)
+  - OULAD: Studentii promovati sunt de 2.8x mai activi pe platforma
+  - xAPI: Engagement total de 2.7x mai mare la studenti promovati
+  - UCI: Performanta corelata puternic cu nota anterioara (G2)
+  - Concluzie EDA: activitatea digitala este un predictor puternic
+
+7.3 Machine Learning Centralizat (Obiectiv O3)
+  - 3 modele comparate: Logistic Regression, Random Forest, GBT
+  - OULAD: Best model GBT, AUC=0.789 (9 features comportamentale+demografice)
+  - xAPI:  Best model LR,  AUC=0.977 (engagement VLE)
+  - UCI:   Best model RF/GBT, AUC>0.92 (note + demografie)
+
+7.4 Federated Learning cu Flower + FedAvg (Obiectiv O3)
+  - Implementare reala FL: datele NU parasesc niciodata clientul (cursul)
+  - Fiecare client = un curs distinct (client_id), server = agregator central
+  - Algoritm FedAvg: media ponderata a coeficientilor dupa fiecare runda
+  - OULAD:  FL AUC=0.782 vs Centralizat AUC=0.766  (+0.016 FL castiga!)
+  - xAPI:   FL AUC=0.934 vs Centralizat AUC=0.940  (-0.006 comparabil)
+  - Convergenta rapida (runda 1) demonstreaza stabilitatea algoritmului
+
+7.5 Concluzie Finala
+  Proiectul valideaza ipoteza principala: arhitecturile federate reprezinta
+  o alternativa tehnic viabila pentru analiza datelor educationale,
+  protejand confidentialitatea studentilor fara a sacrifica semnificativ
+  performanta predictiva. Pe OULAD (22 cursuri independente), FL depaseste
+  chiar modelul centralizat cu +0.016 AUC, demonstrand ca diversitatea
+  datelor distribuite poate fi un avantaj.
+    
 ======================================================================

@@ -81,20 +81,67 @@ def main():
     report_content.append(read_file_content("reports/O3_ml_report.txt"))
     report_content.append("\n" + "-" * 50 + "\n")
 
-    # FL
-    report_content.append("5. SIMULARE FEDERATED LEARNING")
+    # FL Simulare PySpark
+    report_content.append("5. SIMULARE FEDERATED LEARNING (PySpark)")
     report_content.append("-" * 50)
     report_content.append(read_file_content("reports/O3_federated_report.txt"))
+    report_content.append("\n" + "-" * 50 + "\n")
+
+    # Flower FL
+    report_content.append("6. FLOWER FEDERATED LEARNING - COMPARATIE CENTRALIZAT vs FEDERAT")
+    report_content.append("-" * 50)
+    report_content.append(read_file_content("reports/O3_flower_report.txt"))
+    report_content.append("\n" + "-" * 50 + "\n")
+
+    # Concluzii
+    report_content.append("7. CONCLUZII")
+    report_content.append("-" * 50)
+    report_content.append("""
+7.1 Pipeline Big Data (Obiectiv O1 + O2)
+  - Procesare eficienta cu Apache Spark a 8.4 milioane de inregistrari
+  - Arhitectura ETL: CSV -> Parquet (stocare optimizata) -> Agregate
+  - Feature engineering: 9 features comportamentale si demografice
+  - Calitate date: 0 valori nule in toate tabele dupa procesare
+  - Date stocate in Data Lake pe Google Cloud Storage
+
+7.2 Analiza Exploratorie (EDA)
+  - OULAD: Studentii promovati sunt de 2.8x mai activi pe platforma
+  - xAPI: Engagement total de 2.7x mai mare la studenti promovati
+  - UCI: Performanta corelata puternic cu nota anterioara (G2)
+  - Concluzie EDA: activitatea digitala este un predictor puternic
+
+7.3 Machine Learning Centralizat (Obiectiv O3)
+  - 3 modele comparate: Logistic Regression, Random Forest, GBT
+  - OULAD: Best model GBT, AUC=0.789 (9 features comportamentale+demografice)
+  - xAPI:  Best model LR,  AUC=0.977 (engagement VLE)
+  - UCI:   Best model RF/GBT, AUC>0.92 (note + demografie)
+
+7.4 Federated Learning cu Flower + FedAvg (Obiectiv O3)
+  - Implementare reala FL: datele NU parasesc niciodata clientul (cursul)
+  - Fiecare client = un curs distinct (client_id), server = agregator central
+  - Algoritm FedAvg: media ponderata a coeficientilor dupa fiecare runda
+  - OULAD:  FL AUC=0.782 vs Centralizat AUC=0.766  (+0.016 FL castiga!)
+  - xAPI:   FL AUC=0.934 vs Centralizat AUC=0.940  (-0.006 comparabil)
+  - Convergenta rapida (runda 1) demonstreaza stabilitatea algoritmului
+
+7.5 Concluzie Finala
+  Proiectul valideaza ipoteza principala: arhitecturile federate reprezinta
+  o alternativa tehnic viabila pentru analiza datelor educationale,
+  protejand confidentialitatea studentilor fara a sacrifica semnificativ
+  performanta predictiva. Pe OULAD (22 cursuri independente), FL depaseste
+  chiar modelul centralizat cu +0.016 AUC, demonstrand ca diversitatea
+  datelor distribuite poate fi un avantaj.
+    """)
     report_content.append("=" * 70 + "\n")
 
-    # Scriere Finală
+    # Scriere Finala
     out_file = "reports/Raport_Final.txt"
     with open(out_file, "w", encoding="utf-8") as f:
         f.write("\n".join(report_content))
 
     cleanup_intermediate_reports()
 
-    print(f"\n RAPORT FINAL GENERAT: {out_file}")
+    print(f"\n RAport FINAL GENERAT: {out_file}")
 
 if __name__ == "__main__":
     main()

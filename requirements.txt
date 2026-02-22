@@ -1,24 +1,30 @@
 # ============================================================
-# requirements.txt - Dependente proiect Federated Learning
+# requirements.txt
+# Proiect: Analiza Federata a Datelor Educationale
+# Autor: Ciobanu Mihaela Lavinia | Master Ingineria Datelor
 # ============================================================
 
-# Core Big Data
-pyspark
-pandas
-pyarrow
-pyyaml
-setuptools
+# ── APACHE SPARK ────────────────────────────────────────────
+pyspark==3.4.4          # Big Data processing (compatibil Java 17)
+pyarrow>=14.0.0         # Citire/scriere Parquet, bridge Spark<->Pandas
 
-# Federated Learning - Flower framework
-flwr[simulation]
+# ── FEDERATED LEARNING ──────────────────────────────────────
+flwr[simulation]==1.26.1 # Flower FL framework (FedAvg, simulare clienti)
+ray>=2.9.0              # Backend pentru simulare distribuita Flower
 
-# Machine Learning
-scikit-learn
-numpy
+# ── MACHINE LEARNING ────────────────────────────────────────
+scikit-learn>=1.3.0     # LogisticRegression, StandardScaler, metrici
+numpy>=1.24.0           # Calcule numerice, vectori coeficienti FL
 
-# Google Cloud Storage (pentru GCS Data Lake)
-google-cloud-storage
+# ── DATA PROCESSING ─────────────────────────────────────────
+pandas>=2.0.0           # Manipulare date tabelare (Flower citeste direct)
+pyyaml>=6.0             # Citire configs/config.yaml
 
-# Vizualizari (optionale, pentru notebook-uri)
-matplotlib
-seaborn
+# ── GOOGLE CLOUD STORAGE ────────────────────────────────────
+google-cloud-storage>=2.10.0  # Upload/download GCS Data Lake
+
+# ── DESCARCARE DATE ─────────────────────────────────────────
+kagglehub               # Descarcare dataset-uri de pe Kaggle (optional)
+
+# ── UTILITARE ───────────────────────────────────────────────
+setuptools>=68.0        # Necesar pentru unele pachete PySpark

@@ -1,0 +1,200 @@
+{
+  "oulad": {
+    "centralized": {
+      "dataset": "oulad",
+      "n_samples": 25307,
+      "best_model": "GBT",
+      "model_aucs": {
+        "LR": 0.7791197875097621,
+        "RF": 0.8016059061301203,
+        "GBT": 0.8055483681333299
+      },
+      "auc": 0.8055483681333299,
+      "accuracy": 0.7730146187277755,
+      "f1": 0.864488736879349,
+      "precision": 0.7920899070672142,
+      "recall": 0.9514537902388369,
+      "feature_cols": [
+        "total_clicks",
+        "days_active",
+        "avg_score",
+        "clicks_per_day",
+        "engagement",
+        "num_prev_attempts",
+        "studied_credits",
+        "imd_band_num",
+        "edu_level"
+      ]
+    },
+    "federated": {
+      "dataset": "oulad",
+      "n_clients": 22,
+      "num_rounds": 5,
+      "feature_cols": [
+        "total_clicks",
+        "days_active",
+        "avg_score",
+        "clicks_per_day",
+        "engagement",
+        "num_prev_attempts",
+        "studied_credits",
+        "imd_band_num",
+        "edu_level"
+      ],
+      "round_metrics": [
+        {
+          "round": 1,
+          "n_clients": 22,
+          "auc": 0.7935406550435395,
+          "accuracy": 0.7310199386503068,
+          "f1": 0.7998750409321058,
+          "precision": 0.8982041936043594,
+          "recall": 0.7220109114647447
+        },
+        {
+          "round": 2,
+          "n_clients": 22,
+          "auc": 0.7934452014504692,
+          "accuracy": 0.7298696319018405,
+          "f1": 0.7991108728335703,
+          "precision": 0.897123539197552,
+          "recall": 0.721521272501069
+        },
+        {
+          "round": 3,
+          "n_clients": 22,
+          "auc": 0.7934312236534848,
+          "accuracy": 0.7298696319018405,
+          "f1": 0.7991108728335703,
+          "precision": 0.897123539197552,
+          "recall": 0.721521272501069
+        },
+        {
+          "round": 4,
+          "n_clients": 22,
+          "auc": 0.7934496540897475,
+          "accuracy": 0.7298696319018405,
+          "f1": 0.7991108728335703,
+          "precision": 0.897123539197552,
+          "recall": 0.721521272501069
+        },
+        {
+          "round": 5,
+          "n_clients": 22,
+          "auc": 0.7934496540897475,
+          "accuracy": 0.7298696319018405,
+          "f1": 0.7991108728335703,
+          "precision": 0.897123539197552,
+          "recall": 0.721521272501069
+        }
+      ],
+      "final": {
+        "round": 5,
+        "n_clients": 22,
+        "auc": 0.7934496540897475,
+        "accuracy": 0.7298696319018405,
+        "f1": 0.7991108728335703,
+        "precision": 0.897123539197552,
+        "recall": 0.721521272501069
+      }
+    }
+  },
+  "xapi": {
+    "centralized": {
+      "dataset": "xapi",
+      "n_samples": 480,
+      "best_model": "LR",
+      "model_aucs": {
+        "LR": 0.9765625,
+        "RF": 0.92421875,
+        "GBT": 0.96875
+      },
+      "auc": 0.9765625,
+      "accuracy": 0.9791666666666666,
+      "f1": 0.9876543209876543,
+      "precision": 0.975609756097561,
+      "recall": 1.0,
+      "feature_cols": [
+        "raisedhands",
+        "VisITedResources",
+        "AnnouncementsView",
+        "Discussion",
+        "total_engagement",
+        "absence_flag",
+        "parent_involved",
+        "satisfaction"
+      ]
+    },
+    "federated": {
+      "dataset": "xapi",
+      "n_clients": 2,
+      "num_rounds": 5,
+      "feature_cols": [
+        "raisedhands",
+        "VisITedResources",
+        "AnnouncementsView",
+        "Discussion",
+        "total_engagement",
+        "absence_flag",
+        "parent_involved",
+        "satisfaction"
+      ],
+      "round_metrics": [
+        {
+          "round": 1,
+          "n_clients": 2,
+          "auc": 0.9537037037037038,
+          "accuracy": 0.9428571428571428,
+          "f1": 0.9642857142857143,
+          "precision": 0.9310344827586207,
+          "recall": 1.0
+        },
+        {
+          "round": 2,
+          "n_clients": 2,
+          "auc": 0.9537037037037038,
+          "accuracy": 0.9428571428571428,
+          "f1": 0.9642857142857143,
+          "precision": 0.9310344827586207,
+          "recall": 1.0
+        },
+        {
+          "round": 3,
+          "n_clients": 2,
+          "auc": 0.9537037037037038,
+          "accuracy": 0.9428571428571428,
+          "f1": 0.9642857142857143,
+          "precision": 0.9310344827586207,
+          "recall": 1.0
+        },
+        {
+          "round": 4,
+          "n_clients": 2,
+          "auc": 0.9537037037037038,
+          "accuracy": 0.9428571428571428,
+          "f1": 0.9642857142857143,
+          "precision": 0.9310344827586207,
+          "recall": 1.0
+        },
+        {
+          "round": 5,
+          "n_clients": 2,
+          "auc": 0.9537037037037038,
+          "accuracy": 0.9428571428571428,
+          "f1": 0.9642857142857143,
+          "precision": 0.9310344827586207,
+          "recall": 1.0
+        }
+      ],
+      "final": {
+        "round": 5,
+        "n_clients": 2,
+        "auc": 0.9537037037037038,
+        "accuracy": 0.9428571428571428,
+        "f1": 0.9642857142857143,
+        "precision": 0.9310344827586207,
+        "recall": 1.0
+      }
+    }
+  }
+}
