@@ -1,0 +1,93 @@
+# ============================================================
+# experiment_config.yaml
+# Configuratia completa a experimentului FL
+# ============================================================
+
+experiment:
+  name: "Analiza Federata Date Educationale"
+  author: "Ciobanu Mihaela Lavinia"
+  random_state: 42
+  version: "1.0"
+
+federated_learning:
+  num_rounds: 10
+  min_samples_client: 20
+  test_size: 0.2
+  split_strategy: "stratified"
+
+  strategies:
+    - name: "FedAvg"
+      enabled: true
+      params: {}
+    - name: "FedProx"
+      enabled: true
+      params:
+        proximal_mu: 0.1
+        note: "Aproximare prin regularizare locala -- echivalent matematic pentru LR"
+    - name: "FedAdam"
+      enabled: true
+      params:
+        eta: 0.001
+        eta_l: 0.001
+        beta_1: 0.9
+        beta_2: 0.99
+        tau: 1.0e-9
+    - name: "FedMedian"
+      enabled: true
+      params: {}
+
+  mu_analysis:
+    enabled: true
+    dataset: "oulad"
+    mu_values: [0.01, 0.1, 1.0]
+
+datasets:
+  oulad:
+    enabled: true
+    fl_enabled: true
+    client_id_col: "client_id"
+    features:
+      - total_clicks
+      - days_active
+      - avg_score
+      - clicks_per_day
+      - engagement
+      - num_prev_attempts
+      - studied_credits
+      - imd_band_num
+      - edu_level
+
+  xapi:
+    enabled: true
+    fl_enabled: true
+    client_id_type: "nationality"
+    features:
+      - raisedhands
+      - VisITedResources
+      - AnnouncementsView
+      - Discussion
+      - total_engagement
+      - absence_flag
+      - parent_involved
+      - satisfaction
+
+  uci:
+    enabled: true
+    fl_enabled: false
+    fl_exclusion_reason: >
+      UCI contine date de la 2 scoli x 2 materii = max 4 clienti FL posibili.
+      Dezechilibru volume extrem (12:1 intre GP si MS).
+      Partajare pe (scoala x materie) este artificiala, nu reflecta un scenariu FL real.
+      ML centralizat UCI AUC > 0.94 -- FL nu ar adauga valoare demonstrabila.
+
+centralized_ml:
+  models: ["LR", "RF", "GBT"]
+  test_size: 0.2
+  random_state: 42
+
+output:
+  reports_dir: "reports"
+  figures_dir: "reports/figures"
+  results_json: "reports/flower_results.json"
+  final_report: "reports/Raport_Final.txt"
+  results_csv: "reports/rezultate.csv"

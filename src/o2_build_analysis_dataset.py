@@ -18,8 +18,6 @@ def main():
     spark.read.parquet(cfg["paths"]["processed"] + "student_info/").createOrReplaceTempView("info")
     spark.read.parquet(cfg["paths"]["processed"] + "student_assessment/").createOrReplaceTempView("sa")
 
-    # Agregare: date tranzactionale (click-uri) -> profil student
-    # Include si features demografice encodate ordinal direct in SQL
     df = spark.sql("""
         SELECT
             v.client_id,
@@ -29,12 +27,10 @@ def main():
             i.label,
             AVG(s.score)              AS avg_score,
 
-            -- Features demografice numerice (direct)
-            FIRST(i.num_of_prev_attempts)  AS num_prev_attempts,
-            FIRST(i.studied_credits)       AS studied_credits,
+            MAX(i.num_of_prev_attempts)    AS num_prev_attempts,
+            MAX(i.studied_credits)         AS studied_credits,
 
-            -- IMD Band: encodare ordinala 0-9 (socioeconomic status)
-            FIRST(CASE i.imd_band
+            MAX(CASE i.imd_band
                 WHEN '0-10%'    THEN 0
                 WHEN '10-20%'   THEN 1
                 WHEN '20-30%'   THEN 2
@@ -48,8 +44,7 @@ def main():
                 ELSE 5
             END) AS imd_band_num,
 
-            -- Nivel educatie: encodare ordinala 0-4
-            FIRST(CASE i.highest_education
+            MAX(CASE i.highest_education
                 WHEN 'No Formal quals'              THEN 0
                 WHEN 'Lower Than A Level'           THEN 1
                 WHEN 'A Level or Equivalent'        THEN 2
@@ -73,6 +68,7 @@ def main():
 
     n = df.count()
     print(f"Dataset analiza: {n} profiluri de studenti, {df.columns}")
+
     spark.stop()
 
 

@@ -418,15 +418,16 @@ def main():
         import traceback; traceback.print_exc()
 
     sections.append("")
+
+    sections.append("")
     sections.append("=" * 62)
     sections.append("SUMAR COMPARATIV - PERFORMANTA ML CENTRALIZAT")
     sections.append("=" * 62)
-    sections.append("  Dataset  | Studenti | Model ales       | AUC est.")
-    sections.append("  " + "-" * 56)
-    sections.append("  OULAD    | ~28K     | Random Forest    | ~0.789")
-    sections.append("  UCI Mat  | ~395     | GBT / RF         | ~0.92+")
-    sections.append("  UCI Por  | ~649     | GBT / RF         | ~0.92+")
-    sections.append("  xAPI     | 480      | GBT              | ~0.94+")
+    sections.append("  Dataset      | Studenti | Model ales       | Note")
+    sections.append("  " + "-" * 60)
+    sections.append("  OULAD        | ~28K     | GBT/RF/LR Spark  | Client: curs")
+    sections.append("  UCI Mat/Por  | ~650     | LR sklearn       | Exclus din FL")
+    sections.append("  xAPI         | 480      | LR sklearn       | Client: nationalitate")
 
     report = "\n".join(sections)
     with open("reports/O3_ml_report.txt", "w", encoding="utf-8") as f:

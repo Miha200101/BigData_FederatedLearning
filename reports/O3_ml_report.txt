@@ -1,0 +1,92 @@
+==============================================================
+REZULTATE ML CENTRALIZAT - TOATE CELE 3 DATASET-URI
+==============================================================
+
+==============================================================
+DATASET 1: OULAD - ML CENTRALIZAT (SparkML)
+==============================================================
+Features (9): total_clicks, days_active, avg_score, clicks_per_day, engagement, num_prev_attempts, studied_credits, imd_band_num, edu_level
+Split: Stratificat 80/20 | Total: 25,307 studenti
+Train: 20,387  |  Test: 4,920 (Poz=3826, Neg=1094)
+
+  Model                          AUC     Acc      F1
+  ------------------------------------------------
+  Logistic Regression         0.7782  0.6986  0.7223
+  Random Forest (100 trees)   0.7964  0.7846  0.7249
+  Gradient Boosted Trees      0.7941  0.7799  0.7435
+
+  SELECTAT: Random Forest (cel mai bun AUC)
+
+  METRICI PERFORMANTA (Random Forest):
+    AUC (ROC):          0.7964
+    Accuracy:           0.7846
+    F1-Score:           0.7249
+    Sensitivitate (1):  0.9746  <- cat de bine detecteaza promovabilii
+    Specificitate (0):  0.1197  <- cat de bine detecteaza cei respinsi
+
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):       131        963
+    Real 1 (Poz):        97       3729
+    Total corect: 3860/4920 (78.5%)
+
+==============================================================
+DATASET 2: UCI Student Performance - ML (sklearn)
+==============================================================
+
+  Subiect: Matematica | 397 studenti | Features: 8
+  Model                          AUC     Acc      F1
+  --------------------------------------------
+  Logistic Regression         0.9807  0.9375  0.9495
+  Random Forest               0.9700  0.9000  0.9231
+  Gradient Boosted Trees      0.9530  0.8750  0.9057
+
+  SELECTAT: Logistic Regression
+    AUC=0.9807  Acc=0.9375  F1=0.9495
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):        28          2
+    Real 1 (Poz):         3         47
+
+  Subiect: Portugheza | 651 studenti | Features: 8
+  Model                          AUC     Acc      F1
+  --------------------------------------------
+  Logistic Regression         0.9488  0.8473  0.8795
+  Random Forest               0.9363  0.8702  0.9071
+  Gradient Boosted Trees      0.9297  0.8855  0.9180
+
+  SELECTAT: Logistic Regression
+    AUC=0.9488  Acc=0.8473  F1=0.8795
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):        38          3
+    Real 1 (Poz):        17         73
+
+==============================================================
+DATASET 3: xAPI Educational Data - ML (sklearn)
+==============================================================
+  Total studenti: 480 | Features: 8
+  Distributie: Promovati=353, Respinsi=127
+
+  Model                          AUC     Acc      F1
+  --------------------------------------------
+  Logistic Regression         0.9766  0.9792  0.9877
+  Random Forest               0.9242  0.9792  0.9877
+  Gradient Boosted Trees      0.9688  0.9792  0.9877
+
+  SELECTAT: Logistic Regression
+    AUC=0.9766  Acc=0.9792  F1=0.9877
+  MATRICEA DE CONFUZIE:
+                   Prezis 0   Prezis 1
+    Real 0 (Neg):        14          2
+    Real 1 (Poz):         0         80
+
+
+==============================================================
+SUMAR COMPARATIV - PERFORMANTA ML CENTRALIZAT
+==============================================================
+  Dataset      | Studenti | Model ales       | Note
+  ------------------------------------------------------------
+  OULAD        | ~28K     | GBT/RF/LR Spark  | Client: curs
+  UCI Mat/Por  | ~650     | LR sklearn       | Exclus din FL
+  xAPI         | 480      | LR sklearn       | Client: nationalitate

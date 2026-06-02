@@ -1,0 +1,5 @@
+VALIDARE DATASET: assessments
+Randuri: 206
+Null id_assessment: 0
+Null code_module: 0
+Null code_presentation: 0

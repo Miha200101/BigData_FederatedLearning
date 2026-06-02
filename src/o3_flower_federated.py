@@ -17,7 +17,7 @@ Cum functioneaza FL:
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import json, warnings
+import json, warnings, time
 import numpy as np
 import pandas as pd
 import yaml
@@ -34,8 +34,16 @@ from flower_client import EduFederatedClient
 
 warnings.filterwarnings("ignore")
 
-NUM_ROUNDS         = 5
-MIN_SAMPLES_CLIENT = 30
+# Suprima WARNING-urile de la Flower si Ray (deprecated start_simulation, INFO)
+import logging
+logging.getLogger("flwr").setLevel(logging.ERROR)
+logging.getLogger("ray").setLevel(logging.ERROR)
+os.environ["RAY_DEDUP_LOGS"] = "0"
+os.environ.setdefault("GRPC_VERBOSITY", "ERROR")
+os.environ.setdefault("GLOG_minloglevel", "3")
+
+NUM_ROUNDS         = 10
+MIN_SAMPLES_CLIENT = 20
 
 # Features per dataset
 DATASET_FEATURES = {
@@ -46,6 +54,10 @@ DATASET_FEATURES = {
               "absence_rate", "failures", "health", "support"],
     "xapi":  ["raisedhands", "VisITedResources", "AnnouncementsView", "Discussion",
               "total_engagement", "absence_flag", "parent_involved", "satisfaction"],
+    "synthetic": ["total_clicks", "days_active", "avg_score",
+                  "clicks_per_day", "engagement",
+                  "num_prev_attempts", "studied_credits",
+                  "socioeconomic_index", "edu_level"],
 }
 
 
@@ -150,6 +162,41 @@ def load_xapi(cfg) -> pd.DataFrame:
     return df
 
 
+def load_synthetic(cfg) -> pd.DataFrame:
+    """
+    Incarca dataset-ul sintetic cu 25 de universitati independente.
+    
+    Scenariu FL: fiecare universitate = un client independent.
+    Heterogenitate controlata: rata promovare 47%-91%, volum 900-3000 studenti.
+    Dataset generat cu seed=42 pentru reproductibilitate completa.
+    
+    Features (9, identice cu OULAD pentru comparabilitate):
+      total_clicks, days_active, avg_score, clicks_per_day, engagement,
+      num_prev_attempts, studied_credits, socioeconomic_index, edu_level
+    """
+    fpath = cfg["paths"]["raw"] + "synthetic/synthetic_universities.csv"
+    if not os.path.exists(fpath):
+        print(f"  [SYNTHETIC] LIPSA: {fpath}")
+        print(f"  [SYNTHETIC] Ruleaza: python src/generate_synthetic_dataset.py")
+        return pd.DataFrame()
+    
+    df = pd.read_csv(fpath)
+    
+    # Feature engineering identic cu OULAD
+    if "clicks_per_day" not in df.columns:
+        df["clicks_per_day"] = np.where(
+            df["days_active"] > 0, df["total_clicks"] / df["days_active"], 0)
+    if "engagement" not in df.columns:
+        df["engagement"] = np.log1p(df["total_clicks"])
+    
+    n_clients = df["client_id"].nunique()
+    print(f"  [SYNTHETIC] {len(df):,} studenti, {n_clients} universitati")
+    print(f"  [SYNTHETIC] Rata globala promovare: {df['label'].mean():.1%}")
+    print(f"  [SYNTHETIC] Heterogenitate CV={df.groupby('client_id')['label'].mean().std() / df.groupby('client_id')['label'].mean().mean():.3f}")
+    return df
+
+
+
 # ======================================================================
 # MODEL CENTRALIZAT (baseline pentru comparatie)
 # ======================================================================
@@ -167,7 +214,11 @@ def train_centralized(df: pd.DataFrame, ds_name: str) -> dict:
 
     scaler = StandardScaler()
     X_sc   = scaler.fit_transform(X)
-    split  = int(0.8 * len(X_sc))
+
+    # Split stratificat — aceeasi metodologie ca flower_client.py
+    from sklearn.model_selection import train_test_split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_sc, y, test_size=0.2, random_state=42, stratify=y)
 
     # Compara 3 modele
     candidates = {
@@ -182,29 +233,31 @@ def train_centralized(df: pd.DataFrame, ds_name: str) -> dict:
     all_aucs   = {}
 
     for mname, model in candidates.items():
-        model.fit(X_sc[:split], y[:split])
-        y_prob = model.predict_proba(X_sc[split:])[:, 1]
-        auc = roc_auc_score(y[split:], y_prob)
+        model.fit(X_train, y_train)
+        y_prob = model.predict_proba(X_test)[:, 1]
+        auc = roc_auc_score(y_test, y_prob)
         all_aucs[mname] = auc
         if auc > best_auc:
             best_auc   = auc
             best_model = model
             best_name  = mname
 
-    y_pred = best_model.predict(X_sc[split:])
-    y_prob = best_model.predict_proba(X_sc[split:])[:, 1]
+    y_pred = best_model.predict(X_test)
+    y_prob = best_model.predict_proba(X_test)[:, 1]
 
     m = {
         "dataset":      ds_name,
         "n_samples":    len(X),
         "best_model":   best_name,
         "model_aucs":   all_aucs,
-        "auc":          float(roc_auc_score(y[split:], y_prob)),
-        "accuracy":     float(accuracy_score(y[split:], y_pred)),
-        "f1":           float(f1_score(y[split:], y_pred, zero_division=0)),
-        "precision":    float(precision_score(y[split:], y_pred, zero_division=0)),
-        "recall":       float(recall_score(y[split:], y_pred, zero_division=0)),
+        "auc":          float(roc_auc_score(y_test, y_prob)),
+        "accuracy":     float(accuracy_score(y_test, y_pred)),
+        "f1":           float(f1_score(y_test, y_pred, zero_division=0)),
+        "precision":    float(precision_score(y_test, y_pred, zero_division=0)),
+        "recall":       float(recall_score(y_test, y_pred, zero_division=0)),
         "feature_cols": feat_cols,
+        # AUC LR separat — comparatia CORECTA cu FL (ambele sunt LR)
+        "lr_auc":       float(all_aucs.get("LR", 0.0)),
     }
 
     print(f"  Centralizat ({best_name}): AUC={m['auc']:.4f}  "
@@ -218,7 +271,53 @@ def train_centralized(df: pd.DataFrame, ds_name: str) -> dict:
 # FLOWER FL
 # ======================================================================
 
+def _make_client_fn(client_ids, clients_data, feat_cols, proximal_mu):
+    """
+    Factory pentru client_fn — necesar pentru ca Ray serializeaza
+    functia si nu poate folosi closure-uri cu variabile locale din loop.
+    Flower v1.26 cere EXACT signatura: def client_fn(context: Context).
+    """
+    from flwr.common import Context
+
+    # Copiem referintele in scope-ul factory-ului
+    _ids  = client_ids
+    _data = clients_data
+    _feat = feat_cols
+    _mu   = proximal_mu
+
+    def client_fn(context: Context) -> fl.client.Client:
+        node_id = int(context.node_id) % len(_ids)
+        key     = _ids[node_id]
+        c       = EduFederatedClient(key, _data[key], feature_cols=_feat)
+        # Nota: proximal_mu este transmis via config in fit(), nu setat aici.
+        # Setarea C aici ar fi suprascriса de set_parameters() la prima runda.
+        return c.to_client()
+
+    return client_fn
+
+
+def _get_initial_parameters(client_ids, clients_data, feat_cols):
+    """
+    Genereaza parametrii initiali ai modelului global.
+    Necesar pentru FedAdam (si optional util pentru celelalte).
+    """
+    from flwr.common import ndarrays_to_parameters
+    key    = client_ids[0]
+    sample = EduFederatedClient(key, clients_data[key], feature_cols=feat_cols)
+    ndarrays = sample.get_parameters(config={})
+    return ndarrays_to_parameters(ndarrays)
+
+
 def run_flower(df: pd.DataFrame, ds_name: str) -> dict:
+    """
+    Ruleaza Flower FL cu 4 strategii pe acelasi dataset.
+
+    Strategii testate:
+      1. FedAvg    — medie ponderata standard (McMahan et al. 2017)
+      2. FedProx   — termen proximal mu=0.1 (Li et al. 2020)
+      3. FedAdam   — optimizare Adam server-side (Reddi et al. 2021)
+      4. FedMedian — agregare robusta la outlieri (Yin et al. 2018)
+    """
     feat_cols = DATASET_FEATURES.get(ds_name, ["total_clicks", "days_active", "avg_score"])
     feat_cols = [c for c in feat_cols if c in df.columns]
 
@@ -236,72 +335,229 @@ def run_flower(df: pd.DataFrame, ds_name: str) -> dict:
 
     print(f"  Flower FL: {n_clients} clienti, {NUM_ROUNDS} runde, features={len(feat_cols)}")
 
-    round_metrics = []
-    round_counter = [0]  # closure pentru a tine minte runda curenta
+    # Parametrii initiali — necesari pentru FedAdam
+    initial_params = _get_initial_parameters(client_ids, clients_data, feat_cols)
 
-    # FIX flwr v1.26: evaluate_metrics_aggregation_fn primeste (results) nu (server_round, results, failures)
-    def agg_eval_fn(eval_results):
-        """
-        eval_results: List[Tuple[num_examples, metrics_dict]]
-        Aceasta functie este apelata de server dupa ce toti clientii evalueaza.
-        """
-        if not eval_results:
-            return {}
+    min_cl = min(2, n_clients)
+    strategy_results = {}
 
-        round_counter[0] += 1
-        current_round = round_counter[0]
+    for strategy_name in ["FedAvg", "FedProx", "FedAdam", "FedMedian"]:
+        t_strat = time.time()
+        print(f"\n  [{ds_name.upper()}] Strategie: {strategy_name} ...")
 
-        # FedAvg ponderat: fiecare client contribuie proportional cu numarul sau de exemple
-        total = sum(n for n, _ in eval_results)
-        agg = {"round": current_round, "n_clients": len(eval_results)}
+        round_metrics = []
+        round_counter = [0]
 
-        for metric in ["auc", "accuracy", "f1", "precision", "recall"]:
-            agg[metric] = (
-                sum(m.get(metric, 0) * n for n, m in eval_results) / total
-                if total > 0 else 0
+        def agg_eval_fn(eval_results, _rn=round_counter, _rm=round_metrics):
+            if not eval_results:
+                return {}
+            _rn[0] += 1
+            current_round = _rn[0]
+            total = sum(n for n, _ in eval_results)
+            agg   = {"round": current_round, "n_clients": len(eval_results)}
+            for metric in ["auc", "accuracy", "f1", "precision", "recall"]:
+                agg[metric] = (
+                    sum(m.get(metric, 0) * n for n, m in eval_results) / total
+                    if total > 0 else 0
+                )
+            _rm.append(agg)
+            print(f"    Runda {current_round}/{NUM_ROUNDS} -> "
+                  f"AUC={agg['auc']:.4f}  F1={agg['f1']:.4f}  "
+                  f"({len(eval_results)} clienti)")
+            return agg
+
+        # proximal_mu pentru FedProx
+        proximal_mu_val = 0.1 if strategy_name == "FedProx" else 0.0
+
+        # Construieste strategia curenta
+        if strategy_name == "FedAvg":
+            strategy = fl.server.strategy.FedAvg(
+                fraction_fit=1.0,
+                fraction_evaluate=1.0,
+                min_fit_clients=min_cl,
+                min_evaluate_clients=min_cl,
+                min_available_clients=min_cl,
+                evaluate_metrics_aggregation_fn=agg_eval_fn,
+                initial_parameters=initial_params,
+            )
+        elif strategy_name == "FedProx":
+            # on_fit_config_fn transmite proximal_mu catre flower_client.fit()
+            # Flower v1.26 FedProx trimite proximal_mu automat in config
+            strategy = fl.server.strategy.FedProx(
+                fraction_fit=1.0,
+                fraction_evaluate=1.0,
+                min_fit_clients=min_cl,
+                min_evaluate_clients=min_cl,
+                min_available_clients=min_cl,
+                evaluate_metrics_aggregation_fn=agg_eval_fn,
+                proximal_mu=0.1,
+                initial_parameters=initial_params,
+            )
+        elif strategy_name == "FedAdam":
+            strategy = fl.server.strategy.FedAdam(
+                fraction_fit=1.0,
+                fraction_evaluate=1.0,
+                min_fit_clients=min_cl,
+                min_evaluate_clients=min_cl,
+                min_available_clients=min_cl,
+                evaluate_metrics_aggregation_fn=agg_eval_fn,
+                initial_parameters=initial_params,
+                eta=1e-3,
+                eta_l=1e-3,
+                beta_1=0.9,
+                beta_2=0.99,
+                tau=1e-9,
+            )
+        elif strategy_name == "FedMedian":
+            strategy = fl.server.strategy.FedMedian(
+                fraction_fit=1.0,
+                fraction_evaluate=1.0,
+                min_fit_clients=min_cl,
+                min_evaluate_clients=min_cl,
+                min_available_clients=min_cl,
+                evaluate_metrics_aggregation_fn=agg_eval_fn,
+                initial_parameters=initial_params,
             )
 
-        round_metrics.append(agg)
-        print(f"    Runda {current_round}/{NUM_ROUNDS} -> "
-              f"AUC={agg['auc']:.4f}  Acc={agg['accuracy']:.4f}  "
-              f"F1={agg['f1']:.4f}  ({len(eval_results)} clienti activi)")
-        return agg
+        # client_fn prin factory — rezolva problema de serializare Ray
+        client_fn = _make_client_fn(client_ids, clients_data, feat_cols, proximal_mu_val)
 
-    strategy = fl.server.strategy.FedAvg(
-        fraction_fit=1.0,
-        fraction_evaluate=1.0,
-        min_fit_clients=min(2, n_clients),
-        min_evaluate_clients=min(2, n_clients),
-        min_available_clients=min(2, n_clients),
-        evaluate_metrics_aggregation_fn=agg_eval_fn,
-    )
+        try:
+            fl.simulation.start_simulation(
+                client_fn=client_fn,
+                num_clients=n_clients,
+                config=fl.server.ServerConfig(num_rounds=NUM_ROUNDS),
+                strategy=strategy,
+                client_resources={"num_cpus": 1, "num_gpus": 0},
+                ray_init_args={"ignore_reinit_error": True, "include_dashboard": False},
+            )
+            final_auc = round_metrics[-1].get("auc", 0) if round_metrics else 0
+            dur = time.time() - t_strat
+            print(f"  [{strategy_name}] FINAL: AUC={final_auc:.4f} "
+                  f"({len(round_metrics)} runde, {dur:.0f}s)")
+            strategy_results[strategy_name] = {
+                "round_metrics": round_metrics,
+                "final":         round_metrics[-1] if round_metrics else {},
+                "n_rounds_run":  len(round_metrics),
+            }
+        except Exception as e:
+            print(f"  [{strategy_name}] EROARE: {e}")
+            strategy_results[strategy_name] = {
+                "error": str(e), "round_metrics": [], "final": {},
+            }
 
-    # FIX flwr v1.26: client_fn trebuie sa accepte Context
-    from flwr.common import Context
+        # Oprire Ray explicita + pauza — elibereaza porturile si memoria
+        try:
+            import ray as _ray
+            if _ray.is_initialized():
+                _ray.shutdown()
+        except Exception:
+            pass
+        time.sleep(5)
 
-    def client_fn(context: Context) -> fl.client.Client:
-        # context.node_id e un numar intreg; il mapam la lista de clienti
-        node_id = int(context.node_id) % n_clients
-        key = client_ids[node_id]
-        return EduFederatedClient(key, clients_data[key], feature_cols=feat_cols).to_client()
-
-    fl.simulation.start_simulation(
-        client_fn=client_fn,
-        num_clients=n_clients,
-        config=fl.server.ServerConfig(num_rounds=NUM_ROUNDS),
-        strategy=strategy,
-        client_resources={"num_cpus": 1, "num_gpus": 0},
-        ray_init_args={"ignore_reinit_error": True, "include_dashboard": False},
-    )
+    # FedAvg ramane referinta principala (compatibilitate cu generate_report)
+    fedavg_rm = strategy_results.get("FedAvg", {}).get("round_metrics", [])
 
     return {
         "dataset":       ds_name,
         "n_clients":     n_clients,
         "num_rounds":    NUM_ROUNDS,
         "feature_cols":  feat_cols,
-        "round_metrics": round_metrics,
-        "final":         round_metrics[-1] if round_metrics else {},
+        "round_metrics": fedavg_rm,
+        "final":         fedavg_rm[-1] if fedavg_rm else {},
+        # Date complete per strategie (pentru Cap 3)
+        "strategies":    strategy_results,
     }
+
+
+# ======================================================================
+# ANALIZA IMPACT MU — FedProx (doar pe OULAD)
+# ======================================================================
+
+def run_fedprox_mu_analysis(df: pd.DataFrame) -> dict:
+    """
+    Testeaza 3 valori de mu pentru FedProx pe OULAD.
+    Justifica alegerea mu=0.1 ca optima.
+    Valori testate: mu in {0.01, 0.1, 1.0}
+    """
+    feat_cols = DATASET_FEATURES.get("oulad", [])
+    feat_cols = [c for c in feat_cols if c in df.columns]
+
+    clients_data = {
+        cid: grp.reset_index(drop=True)
+        for cid, grp in df.groupby("client_id")
+        if len(grp) >= MIN_SAMPLES_CLIENT
+    }
+    client_ids = list(clients_data.keys())
+    n_clients  = len(client_ids)
+
+    if n_clients < 2:
+        return {}
+
+    print(f"\n  Analiza mu FedProx: {n_clients} clienti, {NUM_ROUNDS} runde")
+
+    initial_params = _get_initial_parameters(client_ids, clients_data, feat_cols)
+    from flwr.common import Context
+    min_cl = min(2, n_clients)
+
+    mu_results = {}
+
+    for mu_val in [0.01, 0.1, 1.0]:
+        print(f"  FedProx mu={mu_val} ...")
+
+        round_metrics = []
+        round_counter = [0]
+
+        def agg_eval_fn(eval_results, _rn=round_counter, _rm=round_metrics):
+            if not eval_results:
+                return {}
+            _rn[0] += 1
+            total = sum(n for n, _ in eval_results)
+            agg = {"round": _rn[0]}
+            for metric in ["auc", "f1", "precision", "recall"]:
+                agg[metric] = sum(m.get(metric,0)*n for n,m in eval_results)/total if total>0 else 0
+            _rm.append(agg)
+            return agg
+
+        strategy = fl.server.strategy.FedProx(
+            fraction_fit=1.0, fraction_evaluate=1.0,
+            min_fit_clients=min_cl, min_evaluate_clients=min_cl,
+            min_available_clients=min_cl,
+            evaluate_metrics_aggregation_fn=agg_eval_fn,
+            proximal_mu=mu_val,
+            initial_parameters=initial_params,
+        )
+
+        client_fn = _make_client_fn(client_ids, clients_data, feat_cols, mu_val)
+
+        try:
+            fl.simulation.start_simulation(
+                client_fn=client_fn,
+                num_clients=n_clients,
+                config=fl.server.ServerConfig(num_rounds=NUM_ROUNDS),
+                strategy=strategy,
+                client_resources={"num_cpus": 1, "num_gpus": 0},
+                ray_init_args={"ignore_reinit_error": True, "include_dashboard": False},
+            )
+            final_auc = round_metrics[-1].get("auc", 0) if round_metrics else 0
+            print(f"    mu={mu_val}: AUC={final_auc:.4f}")
+            mu_results[str(mu_val)] = {
+                "round_metrics": round_metrics,
+                "final_auc": final_auc,
+            }
+        except Exception as e:
+            print(f"    mu={mu_val}: EROARE {e}")
+            mu_results[str(mu_val)] = {"error": str(e)}
+
+        try:
+            import ray as _ray
+            if _ray.is_initialized():
+                _ray.shutdown()
+        except Exception:
+            pass
+        time.sleep(5)
+
+    return mu_results
 
 
 # ======================================================================
@@ -418,6 +674,30 @@ FL rezolva asta astfel:
                          f"{r.get('accuracy',0):>8.4f} {r.get('f1',0):>7.4f} "
                          f"{r.get('precision',0):>8.4f} {r.get('recall',0):>7.4f}  {obs}")
 
+        # Tabel comparatie strategii FL
+        strategies = fed.get("strategies", {})
+        if strategies:
+            lines.append("")
+            lines.append("  COMPARATIE STRATEGII FL:")
+            lines.append(f"  {'Strategie':<12} {'AUC':>8} {'F1':>8} {'Precizie':>10} {'Sensib.':>10}  Descriere")
+            lines.append("  " + "-" * 78)
+            strategy_desc = {
+                "FedAvg":    "Medie ponderata standard (McMahan 2017)",
+                "FedProx":   "Regularizare proximala mu=0.1 (Li 2020)",
+                "FedAdam":   "Optimizare Adam server-side (Reddi 2021)",
+                "FedMedian": "Agregare robusta la outlieri (Yin 2018)",
+            }
+            for sname, sres in strategies.items():
+                if "error" in sres:
+                    lines.append(f"  {sname:<12} {'EROARE':>8}  {sres['error']}")
+                    continue
+                sf = sres.get("final", {})
+                lines.append(
+                    f"  {sname:<12} {sf.get('auc',0):>8.4f} {sf.get('f1',0):>8.4f} "
+                    f"{sf.get('precision',0):>10.4f} {sf.get('recall',0):>10.4f}  "
+                    f"{strategy_desc.get(sname,'')}"
+                )
+
         # Concluzie per dataset
         lines.append("")
         auc_c = c.get("auc", 0)
@@ -489,7 +769,11 @@ def main():
     print(f"Runde: {NUM_ROUNDS}  |  Min samples/client: {MIN_SAMPLES_CLIENT}")
     print("=" * 70)
 
-    loaders = {"oulad": load_oulad, "uci": load_uci, "xapi": load_xapi}
+    loaders = {
+        "oulad": load_oulad,
+        "xapi":  load_xapi,
+        # UCI exclus din FL: 4 clienti posibili, volum dezechilibrat 12:1.
+    }
     all_results = {}
 
     for ds_name, loader_fn in loaders.items():
@@ -504,9 +788,38 @@ def main():
         print("  Flower FL (FedAvg):")
         all_results[ds_name]["federated"]   = run_flower(df, ds_name)
 
+        # Analiza impact mu FedProx — doar pe OULAD (cel mai mare dataset FL)
+        if ds_name == "oulad":
+            print("\n  Analiza impact mu pentru FedProx (mu=0.01, 0.1, 1.0)...")
+            mu_results = run_fedprox_mu_analysis(df)
+            if mu_results:
+                all_results[ds_name]["fedprox_mu_analysis"] = mu_results
+                print("  Sumar analiza mu:")
+                for mu_v, mres in mu_results.items():
+                    if "error" not in mres:
+                        print(f"    mu={mu_v}: AUC final={mres.get('final_auc',0):.4f}")
+
+        # Pauza intre datasets — Ray trebuie sa se inchida complet
+        print(f"  [{ds_name.upper()}] Pauza 8s pentru eliberare resurse Ray...")
+        time.sleep(8)
+
     if not all_results:
         print("\nNiciun dataset disponibil!")
         return
+
+    # Verificare automata: toate strategiile au rulat NUM_ROUNDS runde
+    print("\nVerificare rezultate:")
+    for ds_name, ds_data in all_results.items():
+        strats = ds_data.get("federated", {}).get("strategies", {})
+        for sname, sdata in strats.items():
+            nr = sdata.get("n_rounds_run", 0)
+            auc = sdata.get("final", {}).get("auc", 0)
+            if "error" in sdata:
+                print(f"  [{ds_name.upper()}] {sname}: EROARE — {sdata['error'][:50]}")
+            elif nr < NUM_ROUNDS:
+                print(f"  [{ds_name.upper()}] {sname}: ATENTIE — {nr}/{NUM_ROUNDS} runde (incomplet)")
+            else:
+                print(f"  [{ds_name.upper()}] {sname}: OK — {nr}/{NUM_ROUNDS} runde, AUC={auc:.4f}")
 
     with open("reports/flower_results.json", "w") as f:
         json.dump(all_results, f, indent=2, default=str)

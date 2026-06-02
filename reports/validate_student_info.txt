@@ -1,0 +1,8 @@
+VALIDARE DATASET: student_info
+Randuri: 31,482
+Null code_module: 0
+Null code_presentation: 0
+Null id_student: 0
+Null final_result: 0
+Null num_of_prev_attempts: 0
+Null studied_credits: 0

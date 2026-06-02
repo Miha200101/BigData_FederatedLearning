@@ -24,9 +24,9 @@ RAW_DIR   = Path("data/raw")
 INT_DIR   = Path("data/interim")
 PROC_DIR  = Path("data/processed")
 
-OULAD_DIR = RAW_DIR / "oulad"
-UCI_DIR   = RAW_DIR / "uci"
-XAPI_DIR  = RAW_DIR / "xapi"
+OULAD_DIR        = RAW_DIR / "oulad"
+UCI_DIR          = RAW_DIR / "uci"
+XAPI_DIR         = RAW_DIR / "xapi"
 
 
 def print_progress(block_num, block_size, total_size):
@@ -373,34 +373,33 @@ def create_synthetic_xapi(dest):
 
 
 # ======================================================================
-# MAIN
-# ======================================================================
+
 def main():
     import sys
     print("=" * 65)
-    print("RESET COMPLET SI DESCARCARE DATE DE LA ZERO (structura noua)")
+    print("RESET COMPLET SI DESCARCARE DATE DE LA ZERO")
     print("Structura tinta:")
-    print("  data/raw/oulad/  <- OULAD")
-    print("  data/raw/uci/    <- UCI")
-    print("  data/raw/xapi/   <- xAPI")
+    print("  data/raw/oulad/        <- OULAD (432MB)")
+    print("  data/raw/uci/          <- UCI Student Performance")
+    print("  data/raw/xapi/         <- xAPI-Edu-Data")
     print("=" * 65)
 
     if "--yes" not in sys.argv:
         resp = input("\nSterge interim/ si processed/ si re-descarca totul.\nContinui? (y/n): ")
         if resp.lower() not in ["y", "yes", "da"]:
-            print("Anul.")
+            print("Anulat.")
             return
 
     clean_data()
-    oulad_ok = download_oulad()
-    uci_ok   = download_uci()
-    xapi_ok  = download_xapi()
+    oulad_ok       = download_oulad()
+    uci_ok         = download_uci()
+    xapi_ok        = download_xapi()
 
     print("\n" + "=" * 65)
     print("SUMAR:")
-    print(f"  {'[OK]' if oulad_ok else '[EROARE]'} OULAD -> data/raw/oulad/")
-    print(f"  {'[OK]' if uci_ok   else '[EROARE]'} UCI   -> data/raw/uci/")
-    print(f"  {'[OK]' if xapi_ok  else '[EROARE]'} xAPI  -> data/raw/xapi/")
+    print(f"  {'[OK]' if oulad_ok       else '[EROARE]'} OULAD        -> data/raw/oulad/")
+    print(f"  {'[OK]' if uci_ok         else '[EROARE]'} UCI          -> data/raw/uci/")
+    print(f"  {'[OK]' if xapi_ok        else '[EROARE]'} xAPI         -> data/raw/xapi/")
     print("\nPASII URMATORI:")
     print("  1. Verifica Ray:    python -c \"import ray; print('Ray OK')\"")
     print("  2. Daca lipseste:   pip install ray[default]")

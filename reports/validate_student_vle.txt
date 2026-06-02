@@ -1,0 +1,8 @@
+VALIDARE DATASET: student_vle
+Randuri: 8,459,320
+Null code_module: 0
+Null code_presentation: 0
+Null id_student: 0
+Null id_site: 0
+Null date: 0
+Null sum_click: 0

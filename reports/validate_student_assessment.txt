@@ -1,0 +1,5 @@
+VALIDARE DATASET: student_assessment
+Randuri: 173,739
+Null id_assessment: 0
+Null id_student: 0
+Null score: 0

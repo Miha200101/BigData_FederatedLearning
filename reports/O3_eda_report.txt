@@ -1,0 +1,89 @@
+============================================================
+RAPORT EDA - ANALIZA EXPLORATORIE
+OULAD, UCI, xAPI
+============================================================
+
+============================================================
+DATASET 1: OULAD (Open University Learning Analytics)
+============================================================
+Total studenti analizati:  28,174
+Sursa date:                Apache Spark + Parquet
+Features disponibile:      9 (comportamentale + demografice)
+
+  Metrica                       Promovati (1)   Respinsi (0)  Diferenta
+  --------------------------------------------------------------------
+  Numar studenti                       21,637          6,537
+  Procent                               76.8%          23.2%
+  Medie click-uri                    10,740.9        3,826.0    +6914.9
+  Medie zile active                      68.7           34.6      +34.1
+  Medie scor evaluare                   75.11          64.42     +10.69
+  Medie incercari anterioare             0.13           0.24      -0.11
+  Medie credite studiate                 78.5           76.4       +2.1
+
+  CONCLUZIE: Studentii promovati sunt de 2.8x mai activi pe platforma.
+  Corelatie activitate digitala <-> promovabilitate: PUTERNICA
+
+============================================================
+DATASET 2: UCI Student Performance
+============================================================
+
+  Subiect: Matematica | Total: 397 studenti
+  Metrica                   Promovati (G3>=10) Respinsi (G3<10)
+  --------------------------------------------------------------
+  Numar studenti                           265              132
+  Procent                                66.8%            33.2%
+  Medie nota finala (G3)                 12.88             5.35
+  Medie note anterioare                  12.54             7.27
+  Tendinta note (G2-G1)                   0.17            -0.92
+  Medie timp studiu                       2.08             1.94
+  Medie absente                           5.19             6.70
+
+  Subiect: Portugheza | Total: 651 studenti
+  Metrica                   Promovati (G3>=10) Respinsi (G3<10)
+  --------------------------------------------------------------
+  Numar studenti                           551              100
+  Procent                                84.6%            15.4%
+  Medie nota finala (G3)                 12.81             6.89
+  Medie note anterioare                  12.17             7.66
+  Tendinta note (G2-G1)                   0.27            -0.25
+  Medie timp studiu                       1.99             1.61
+  Medie absente                           3.48             4.61
+
+  CONCLUZIE: Performanta corelata puternic cu nota anterioara (G2).
+
+============================================================
+DATASET 3: xAPI Educational Data
+============================================================
+  Total studenti:    480
+  H (High):   142 (29.6%)
+  M (Medium): 211 (44.0%)
+  L (Low):    127 (26.5%)
+
+  Metrica                      Promovati (H+M)   Respinsi (L)
+  ----------------------------------------------------------
+  Numar studenti                          353            127
+  Procent                               73.5%          26.5%
+  Ridicat mana (raisedhands)             57.5           16.9
+  Resurse vizitate                       67.9           18.3
+  Anunturi vizualizate                   46.0           15.6
+  Participare discutii                   47.8           30.8
+  Engagement total                      219.2           81.6
+
+  Top 5 nationalitati dupa rata de promovare:
+    Iraq                : 100.0%
+    Palestine           : 100.0%
+    venzuela            : 100.0%
+    SaudiArabia         : 90.9%
+    lebanon             : 88.2%
+
+  CONCLUZIE: Studenti promovati au engagement de 2.7x mai mare.
+  Cel mai predictiv feature: VisITedResources + raisedhands.
+
+============================================================
+SUMAR COMPARATIV DATASETS
+============================================================
+  Dataset | Sursa         | Studenti | Client FL        | Features cheie
+  --------------------------------------------------------------------------
+  OULAD   | Parquet/Spark | ~28K     | Curs (22)        | clicks, zile, scor, demografie
+  UCI     | CSV/pandas   | ~650     | Exclus din FL    | note, studytime, absente
+  xAPI    | CSV/pandas   | 480      | Nationalitate (4)| engagement VLE, discutii
